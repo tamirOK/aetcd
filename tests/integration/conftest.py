@@ -22,7 +22,7 @@ def etcdctl():
         endpoint = os.environ.get('TEST_ETCD_HTTP_URL')
         if endpoint:
             args = ['--endpoints', endpoint] + list(args)
-        args = ['etcdctl', '-w', 'json'] + list(args)
+        args = ['etcdctl', '--dial-timeout', '2s', '-w', 'json'] + list(args)
 
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -59,7 +59,7 @@ async def client(etcdctl):
         port=port,
         username=None,
         password=None,
-        timeout=None,
+        timeout=5,
         options=None,
     ):
         async with aetcd.Client(
@@ -85,5 +85,5 @@ async def client(etcdctl):
 
 @pytest.fixture
 async def etcd(client):
-    async with client() as etcd:
+    async with client(timeout=5) as etcd:
         yield etcd
