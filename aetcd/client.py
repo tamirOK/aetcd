@@ -162,8 +162,7 @@ class Client:
 
         self._watcher = None
 
-    @_handle_errors
-    async def connect(self) -> None:
+    async def _connect(self):
         """Establish a connection to an etcd."""
         if self._connected.is_set():
             return
@@ -208,11 +207,15 @@ class Client:
         finally:
             self._is_connecting = False
 
-    async def close(self) -> None:
-        """Close established connection and frees allocated resources.
+    @_handle_errors
+    async def connect(self) -> None:
+        """Establish a connection to an etcd."""
+        await asyncio.wait_for(
+            self._connect(),
+            timeout=10,
+        )
 
-        It could be called while other operation is being executed.
-        """
+    async def _close(self):
         if not self._connected.is_set() and self._is_connecting:
             # Wait for the previous request to complete
             await asyncio.wait_for(
@@ -233,6 +236,13 @@ class Client:
             self._init_channel_attrs()
 
         self._connected.clear()
+
+    async def close(self) -> None:
+        """Close established connection and frees allocated resources.
+
+        It could be called while other operation is being executed.
+        """
+        await asyncio.wait_for(self._close(), timeout=10)
 
     async def __aenter__(self):
         await self.connect()
